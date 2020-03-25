@@ -1,0 +1,38 @@
+import requests
+import cv2
+import os
+import numpy as np
+import keras
+from keras.models import load_model
+import serial
+
+def img_preprocess(img):
+    img = img[100:250,:,:]
+    img = cv2.cvtColor(img,cv2.COLOR_BGR2YUV)
+    img = cv2.GaussianBlur(img,(200,66))
+    img = img/255
+    return img
+
+model = load_model("C://Users//HP//Desktop//train3.h5")
+url= "http://192.168.43.1:8080/shot.jpg"
+i=0
+bluetooth = serial.Serial("COM4", 9600)
+while(true):
+    im_resp = requests.get(url)
+    im_arr = np.array(bytearray(im_resp.content),dtype = np.unit8)
+    img = cv2.imdecode(im_arr,-1)
+    img = cv2.resize(img, (640,600))
+    cv2.imshow("title",img)
+    img = img_preprocess(img)
+    img = img.reshape(1,66,200,3)
+    img = np.array(img)
+    steer = model.predict(img)
+    print(steer)
+    if (steer <-0.4):
+        bluetooth.write("L".encode())
+    elif (steer >0.4):
+        bluetooth.write("R".encode())
+    else:
+        bluetooth.write("F".encode())
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
